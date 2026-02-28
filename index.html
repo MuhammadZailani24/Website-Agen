@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <!-- Disable zoom (sesuai request) -->
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Catatan Keuangan Agen Mandiri</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- Top Header -->
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">ML</div>
+        <div class="brand-text">
+          <h1>Catatan Keuangan Agen Mandiri</h1>
+          <p class="muted">LocalStorage • Pribadi • Tema Mandiri</p>
+        </div>
+      </div>
+
+      <div class="top-actions">
+        <button class="btn ghost" id="btnExport">Export</button>
+        <label class="btn ghost file">
+          Import
+          <input type="file" id="fileImport" accept="application/json" />
+        </label>
+        <button class="btn danger" id="btnReset">Reset</button>
+      </div>
+    </header>
+
+    <!-- PAGES -->
+    <main class="pages">
+
+      <!-- DASHBOARD -->
+      <section class="page" id="page-dashboard">
+        <div class="page-head">
+          <h2>Dashboard</h2>
+          <p class="muted">Ringkasan saldo, keuntungan, dan hutang.</p>
+        </div>
+
+        <section class="cards">
+          <div class="card">
+            <div class="card-title">Total Saldo</div>
+            <div class="card-value" id="vTotal">Rp 0</div>
+            <div class="card-sub muted">Cash + ATM</div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Saldo Cash</div>
+            <div class="card-value" id="vCash">Rp 0</div>
+            <div class="card-sub muted">Uang tunai</div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Saldo ATM</div>
+            <div class="card-value" id="vATM">Rp 0</div>
+            <div class="card-sub muted">Saldo rekening</div>
+          </div>
+
+          <div class="card accent">
+            <div class="card-title">Keuntungan</div>
+            <div class="card-value" id="vProfit">Rp 0</div>
+            <div class="card-sub muted">Masuk setelah transaksi lunas</div>
+          </div>
+
+          <div class="card warn">
+            <div class="card-title">Di Hutang</div>
+            <div class="card-value" id="vDebt">Rp 0</div>
+            <div class="card-sub muted">Total belum dibayar</div>
+          </div>
+        </section>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Saldo Awal</h3>
+            <p class="muted">Set saldo pertama (bisa diubah kapan saja)</p>
+          </div>
+
+          <form id="initForm" class="form">
+            <div class="row">
+              <div class="field">
+                <label>Saldo Awal Cash</label>
+                <input type="number" id="initCash" min="0" step="1000" placeholder="contoh: 1000000" required />
+              </div>
+              <div class="field">
+                <label>Saldo Awal ATM</label>
+                <input type="number" id="initATM" min="0" step="1000" placeholder="contoh: 2000000" required />
+              </div>
+            </div>
+            <div class="row actions">
+              <button class="btn primary" type="submit">Simpan Saldo Awal</button>
+            </div>
+            <div class="help muted">Saldo saat ini dihitung dari saldo awal + transaksi yang sudah lunas.</div>
+          </form>
+        </div>
+      </section>
+
+      <!-- TRANSAKSI -->
+      <section class="page" id="page-transaksi" hidden>
+        <div class="page-head">
+          <h2>Transaksi</h2>
+          <p class="muted">Input transaksi baru. Pilih “Dihutang” jika belum dibayar.</p>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Input Transaksi</h3>
+            <p class="muted">Tarik Tunai / Transfer / Pengeluaran</p>
+          </div>
+
+          <form id="txForm" class="form">
+            <div class="row">
+              <div class="field">
+                <label>Tanggal</label>
+                <input type="date" id="txDate" required />
+              </div>
+
+              <div class="field">
+                <label>Jenis Transaksi</label>
+                <select id="txType" required>
+                  <option value="tarik_tunai">Tarik Tunai (Cash → ATM)</option>
+                  <option value="transfer">Transfer (ATM → Cash)</option>
+                  <option value="pengeluaran">Pengeluaran (Kurangi Saldo)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="field">
+                <label>Nominal (Rp)</label>
+                <input type="number" id="txAmount" min="0" step="1000" placeholder="contoh: 250000" required />
+                <div class="help muted" id="profitHint">Keuntungan transaksi: Rp 0</div>
+              </div>
+
+              <div class="field" id="sourceWrap">
+                <label>Sumber Saldo (khusus Pengeluaran)</label>
+                <select id="txSource">
+                  <option value="cash">Cash</option>
+                  <option value="atm">ATM</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="field" id="debtWrap">
+                <label>Status Pembayaran</label>
+                <label class="checkline">
+                  <input type="checkbox" id="txDebt" />
+                  <span>Dihutang (belum dibayar) — saldo & profit belum dihitung</span>
+                </label>
+                <div class="help muted">Nanti klik tombol <b>Bayar</b> di Riwayat untuk melunasi.</div>
+              </div>
+              <div class="field"></div>
+            </div>
+
+            <div class="field">
+              <label>Keterangan</label>
+              <input type="text" id="txNote" placeholder="contoh: tarik tunai pelanggan / biaya operasional" />
+            </div>
+
+            <div class="row actions">
+              <button class="btn primary" type="submit" id="btnSaveTx">Simpan Transaksi</button>
+              <button class="btn" type="button" id="btnCancelEdit" hidden>Batal Edit</button>
+            </div>
+
+            <div class="notice" id="txNotice" hidden></div>
+          </form>
+        </div>
+      </section>
+
+      <!-- RIWAYAT -->
+      <section class="page" id="page-riwayat" hidden>
+        <div class="page-head">
+          <h2>Riwayat</h2>
+          <p class="muted">Di HP tampil kartu. Hutang punya tombol Bayar.</p>
+        </div>
+
+        <div class="panel">
+          <div class="filters">
+            <div class="field">
+              <label>Filter Jenis</label>
+              <select id="fType">
+                <option value="all">Semua</option>
+                <option value="tarik_tunai">Tarik Tunai</option>
+                <option value="transfer">Transfer</option>
+                <option value="pengeluaran">Pengeluaran</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label>Cari Keterangan</label>
+              <input type="text" id="fQuery" placeholder="ketik untuk mencari..." />
+            </div>
+          </div>
+
+          <!-- Desktop Table -->
+          <div class="table-wrap desktop-only">
+            <table class="table" id="txTable">
+              <thead>
+                <tr>
+                  <th>Tanggal</th>
+                  <th>Jenis</th>
+                  <th>Status</th>
+                  <th>Nominal</th>
+                  <th>Profit</th>
+                  <th>Dampak</th>
+                  <th>Keterangan</th>
+                  <th style="width:200px;">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="txBody"></tbody>
+            </table>
+          </div>
+
+          <!-- Mobile Cards -->
+          <div class="mobile-only" id="txCards"></div>
+
+          <div class="muted small" id="txCount">0 transaksi</div>
+        </div>
+      </section>
+
+      <!-- MODAL / PEMILIK -->
+      <section class="page" id="page-modal" hidden>
+        <div class="page-head">
+          <h2>Modal</h2>
+          <p class="muted">Catatan pemilik saldo / pemberi modal.</p>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Pemilik Saldo / Pemberi Modal</h3>
+            <p class="muted">Catatan modal (tidak mengubah saldo otomatis).</p>
+          </div>
+
+          <form id="ownerForm" class="form">
+            <input type="hidden" id="ownerId" />
+            <div class="row">
+              <div class="field">
+                <label>Nama</label>
+                <input type="text" id="ownerName" placeholder="contoh: Pak A" required />
+              </div>
+              <div class="field">
+                <label>Nominal Modal (Rp)</label>
+                <input type="number" id="ownerAmount" min="0" step="1000" placeholder="contoh: 5000000" required />
+              </div>
+            </div>
+            <div class="field">
+              <label>Catatan</label>
+              <input type="text" id="ownerNote" placeholder="contoh: bagi hasil 60/40" />
+            </div>
+            <div class="row actions">
+              <button class="btn primary" type="submit" id="btnSaveOwner">Simpan</button>
+              <button class="btn" type="button" id="btnCancelOwnerEdit" hidden>Batal</button>
+            </div>
+          </form>
+
+          <div class="divider"></div>
+
+          <div class="table-wrap desktop-only">
+            <table class="table" id="ownerTable">
+              <thead>
+                <tr>
+                  <th>Nama</th>
+                  <th>Modal</th>
+                  <th>Catatan</th>
+                  <th style="width:140px;">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="ownerBody"></tbody>
+            </table>
+          </div>
+
+          <div class="mobile-only" id="ownerCards"></div>
+
+          <div class="muted small" id="ownerCount">0 pemilik</div>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="footer muted">
+      Terakhir diperbarui: <span id="lastUpdate">-</span>
+    </footer>
+
+    <!-- Bottom Navbar -->
+    <nav class="bottom-nav">
+      <button class="nav-item active" data-page="dashboard" aria-label="Dashboard">
+        <span class="nav-dot"></span>
+        <span class="nav-label">Dashboard</span>
+      </button>
+      <button class="nav-item" data-page="transaksi" aria-label="Transaksi">
+        <span class="nav-dot"></span>
+        <span class="nav-label">Transaksi</span>
+      </button>
+      <button class="nav-item" data-page="riwayat" aria-label="Riwayat">
+        <span class="nav-dot"></span>
+        <span class="nav-label">Riwayat</span>
+      </button>
+      <button class="nav-item" data-page="modal" aria-label="Modal">
+        <span class="nav-dot"></span>
+        <span class="nav-label">Modal</span>
+      </button>
+    </nav>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
